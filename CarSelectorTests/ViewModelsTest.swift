@@ -7,7 +7,7 @@
 //
 
 import XCTest
-@testable import Auto1Car
+@testable import CarSelector
 
 class ViewModelsTest: XCTestCase {
     

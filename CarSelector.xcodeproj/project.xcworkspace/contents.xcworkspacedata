@@ -2,6 +2,6 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "self:Auto1Car.xcodeproj">
+      location = "self:/Volumes/Data/Projects/Auto1Car/CarSelector.xcodeproj">
    </FileRef>
 </Workspace>

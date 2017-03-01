@@ -3,31 +3,30 @@
 //  Auto1Car
 //
 //  Created by Hardik on 25/02/17.
-//  Copyright © 2017 Auto1. All rights reserved.
+//  Copyright © 2017 CarSelector. All rights reserved.
 //
 
 import Foundation
-import StockData
 
 
-// Completion handler that fires at the end of a `StockAPIOperationCompletionHandler`
+// Completion handler that fires at the end of a `APIOperationCompletionHandler`
 public typealias APIOperationCompletionHandler = (Result<[Any]>) -> Void
 
 /**
  Composite class that brings together network requests (`NetworkOperation`),
  JSON parsing (`ParseJSONOperation`) as a single operation.
  */
-class Auto1APIOperation<T: JSONDecode>: Operation {
+class MainAPIOperation<T: JSONDecodable>: Operation {
     fileprivate let request: APIRequest
     fileprivate var session: URLSession!
-    var completionHandler: StockAPIOperationCompletionHandler?
+    var completionHandler: APIOperationCompletionHandler?
     fileprivate var parsedObjects: [Any]?
     fileprivate let internalQueue: OperationQueue = {
         let queue = OperationQueue()
         queue.name = "MediumAPIOperation Internal Queue"
         return queue
     }()
-    /// The last thing we do before punting out.
+    /// The last thing we do before exit.
     fileprivate var finalOperation: BlockOperation!
     
     // MARK: Operation Property Overrides
@@ -64,7 +63,7 @@ class Auto1APIOperation<T: JSONDecode>: Operation {
     init(requestTemplate: APIRequest,
          session: URLSession,
          qos: QualityOfService = .default,
-         completionHandler: StockAPIOperationCompletionHandler?) {
+         completionHandler: APIOperationCompletionHandler?) {
         self.request = requestTemplate
         self.session = session
         self.internalQueue.qualityOfService = qos
@@ -74,7 +73,7 @@ class Auto1APIOperation<T: JSONDecode>: Operation {
         self.qualityOfService = qos
     }
     
-    // MARK: Operation
+    // MARK: Operation gets started
     override func start() {
         if isCancelled {
             isFinished = true
@@ -85,32 +84,33 @@ class Auto1APIOperation<T: JSONDecode>: Operation {
         
         let requestOperation = NetworkOperation(requestTemplate: request, session: session)
         requestOperation.qualityOfService = self.qualityOfService
-        requestOperation.completionHandler = { result in
+        requestOperation.completionHandler = { [weak self] result in
             switch (result) {
             case .success(let json):
-                self.parseJSON(json: json)
+                self?.parseJSON(json: json)
                 break
             case .failure(let error):
-                if let completion = self.completionHandler {
+                if let completion = self?.completionHandler {
                     completion(Result.failure(error))
                 }
                 
-                self.isFinished = true
+                self?.isFinished = true
                 break
             }
         }
         
         internalQueue.addOperation(requestOperation)
         
-        finalOperation = BlockOperation(block: {
-            if let completion = self.completionHandler,
-                let objects = self.parsedObjects {
+        // Send back parsed objects to subscriber block
+        finalOperation = BlockOperation(block: { [weak self] in
+            if let completion = self?.completionHandler,
+                let objects = self?.parsedObjects {
                 DispatchQueue.main.async {
                     completion(Result.success(objects))
                 }
             }
             
-            self.isFinished = true
+            self?.isFinished = true
         })
         
         internalQueue.isSuspended = false
@@ -120,22 +120,22 @@ class Auto1APIOperation<T: JSONDecode>: Operation {
 
 
 // MARK: Private/Convenience
-private extension StockAPIOperation {
+private extension MainAPIOperation {
     
     //Fire off an internal operation to parse JSON object.
     func parseJSON(json: Any) {
         let jsonOperation = ParseJSONOperation<T>(json: json)
         jsonOperation.qualityOfService = self.qualityOfService
-        jsonOperation.completionHandler = { result in
+        jsonOperation.completionHandler = { [weak self] result in
             switch (result) {
             case .success(let objects):
-                self.parsedObjects = objects
+                self?.parsedObjects = objects
                 break
             case .failure(let error):
-                if let completion = self.completionHandler {
+                if let completion = self?.completionHandler {
                     completion(Result.failure(error))
                 }
-                self.isFinished = true
+                self?.isFinished = true
             }
         }
         

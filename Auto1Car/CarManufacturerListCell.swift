@@ -3,22 +3,29 @@
 //  Auto1Car
 //
 //  Created by Hardik on 24/02/17.
-//  Copyright © 2017 Auto1. All rights reserved.
+//  Copyright © 2017 CarSelector. All rights reserved.
 //
 
 import UIKit
 
 class CarManufacturerListCell: UITableViewCell {
 
-    override func awakeFromNib() {
-        super.awakeFromNib()
-        // Initialization code
+    @IBOutlet weak var nameLabel: UILabel!
+    var viewModel: ManufacturerViewModel? {
+        didSet {
+            updateValues()
+        }
     }
-
-    override func setSelected(_ selected: Bool, animated: Bool) {
-        super.setSelected(selected, animated: animated)
-
-        // Configure the view for the selected state
+    
+    func configure(withManufacturerViewModel manufacturerViewModel: ManufacturerViewModel,
+                   atIndexPath indexPath: IndexPath) {
+        viewModel = manufacturerViewModel
+        backgroundColor = indexPath.row % 2 == 0 ? .white : .lightGray
     }
+}
 
+extension CarManufacturerListCell {
+    func updateValues() {
+        nameLabel.text = viewModel?.name
+    }
 }
